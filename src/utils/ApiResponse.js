@@ -1,3 +1,4 @@
+//to structure the response been sent or received 
 class ApiResponse{
     constructor(statusCode,data,message="Success"){
         this.statusCode=statusCode
