@@ -1,10 +1,11 @@
 import {v2 as cloudinary} from 'cloudinary'
 import fs from 'fs'
+import { ApiError } from './ApiError.js'
 
 cloudinary.config({
     cloud_name:process.env.CLOUDINARY_CLOUD_NAME,
     api_key:process.env.CLOUDINARY_API_KEY,
-    api_secret:process.env.CLOUDINARY_API_SECRET
+    api_secret:process.env.CLOUDINARY_SECRET_KEY
 })
 
 const uploadOnCloudinary = async (localFilePath)=>{
@@ -12,17 +13,25 @@ const uploadOnCloudinary = async (localFilePath)=>{
         if(!localFilePath) return null
         //nahi to upload it on cloudinary
        const response = await cloudinary.uploader.upload(localFilePath,{
-            resource_type:auto
+            resource_type:"auto"
         })
         //file uploaded
-        console.log("File has been uploaded on cloudinary ",response.url);
+        // console.log("File has been uploaded on cloudinary ",response.url);
+        // console.log("File has been uploaded on cloudinary ",response);
+        fs.unlinkSync(localFilePath);//delete the file from local server
         return response;
     }
 
     catch(error){
-        fs.unlinkSync(localFilePath);
-//remove locally saved temp file as the upload operation got failed
-        return null
+        console.error("Cloudinary upload failed:", error);
+        if (!fs.existsSync(localFilePath)) {
+            throw new ApiError(500, "File not found on server!");
+        }
+        else{
+            fs.unlinkSync(localFilePath);
+        }
+        
+        return null;
     }
 }
 
