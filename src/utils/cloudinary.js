@@ -10,10 +10,13 @@ cloudinary.config({
 
 const uploadOnCloudinary = async (localFilePath)=>{
     try{
-        if(!localFilePath) return null
+        if(!localFilePath) {
+            throw new ApiError(409,"Unable to find Image's local-path")
+        }
         //nahi to upload it on cloudinary
        const response = await cloudinary.uploader.upload(localFilePath,{
-            resource_type:"auto"
+            resource_type:"auto",
+            folder:"videotube"
         })
         //file uploaded
         // console.log("File has been uploaded on cloudinary ",response.url);
