@@ -1,6 +1,7 @@
 import {v2 as cloudinary} from 'cloudinary'
 import fs from 'fs'
 import { ApiError } from './ApiError.js'
+import asyncHandler from './asyncHandler.js'
 
 cloudinary.config({
     cloud_name:process.env.CLOUDINARY_CLOUD_NAME,
@@ -37,5 +38,20 @@ const uploadOnCloudinary = async (localFilePath)=>{
         return null;
     }
 }
+const deleteFromCloudinary = async(PublicId)=>{
+    try{
+        if(!PublicId){
+            throw new ApiError(404,"Invalid Image Public Id")
+        }
+        const response = await cloudinary.uploader.destroy(PublicId);
+        if(response.result!=="ok"){
+            throw new ApiError("Unable to delete file from cloudinary")
+        }
+    }
+    catch(error){
+        console.error("Cloudinary Deletion failed:", error);
+        throw new ApiError(500, "Error while deleting from Cloudinary");
+    }
+}
 
-export {uploadOnCloudinary}
+export {uploadOnCloudinary,deleteFromCloudinary}
