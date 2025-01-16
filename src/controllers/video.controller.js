@@ -3,6 +3,7 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import {Video} from '../models/video.model.js'
+import { isValidObjectId } from "mongoose";
 
 const publishVideo = asyncHandler(async(req,res)=>{
 
@@ -56,7 +57,7 @@ const publishVideo = asyncHandler(async(req,res)=>{
 const getAllVideos = asyncHandler(async(req,res)=>{
     const {page=1,limit=10,skip,query,sortBy,sortType,userId} = req.query
 
-    const video = await Video.aggregate([
+    const videos = await Video.aggregate([
         {
             $match:{
                 $or:[{title:{$regex:query,$options:"i"}},
@@ -79,10 +80,58 @@ const getAllVideos = asyncHandler(async(req,res)=>{
             }
         },
         {
-
+            $unwind:"$uploadedBy"
+        },
+        {
+            $project:{
+                title:1,
+                description:1,
+                videoFile:1,
+                thumbnail:1,
+                uploadedBy:1
+            }
+        },
+        {
+            $sort:{
+                [sortBy]:sortType === 'asc'? 1 : -1
+            }
+        },
+        {
+            $skip:(page-1)*limit
+        },{
+            $limit:parseInt(limit)
         }
     ])
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            {videos},
+            "All videos are fetched successfully"
+        )
+    )
+})
+const getVideoById = asyncHandler(async(req,res)=>{
+  const {videoId} = req.params
+  if(!isValidObjectId(videoId)){
+    throw new ApiError(400,"Invalid Video Id")
+  }
+  const video = await Video.findById(videoId);
+  if(!video){
+    throw new ApiError(404,"Video does not exist!")
+  }
+
+  return res
+  .status(200)
+  .json(new ApiResponse(
+    200,
+    {video},
+    "Video Fetched Successfully"
+  ))
 })
 
 
-export {publishVideo,getAllVideos}
+
+export {publishVideo,getAllVideos,getVideoById}
