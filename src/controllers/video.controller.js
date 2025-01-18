@@ -1,9 +1,10 @@
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
 import {Video} from '../models/video.model.js'
 import { isValidObjectId } from "mongoose";
+import { extractPublicId } from "../utils/extractPublicId.js";
 
 const publishVideo = asyncHandler(async(req,res)=>{
 
@@ -131,7 +132,76 @@ const getVideoById = asyncHandler(async(req,res)=>{
     "Video Fetched Successfully"
   ))
 })
+const updateVideo = asyncHandler(async(req,res)=>{
+    //find video
+    const {videoId} = req.params
+    if(!isValidObjectId(videoId)){
+        throw new ApiError(400,"Invalid Video Id")
+    }
+    const {title,description} = req.body
+    const isNewThumbnail = req.body.isNewThumbnail === 'true';
+    // console.log(title,description,typeof(isNewThumbnail));
+    
+     const video = await Video.findById(videoId)
+     if(!video){
+        throw new ApiError(404,"Invalid Video Id")
+     }
+     if(!(video.owner).equals(req.user._id)){
+        throw new ApiError(400,"You are not authorized to update Video details!")
+     }
+     let updatedThumbnail = null;
+
+    if(isNewThumbnail){
+        const thumbnailLocalPath = req.file?.path
+        if(!thumbnailLocalPath){
+         throw new ApiError(400,"Thumbnail is required") 
+       }
+       const newThumbnail = await uploadOnCloudinary(thumbnailLocalPath)
+       if(!newThumbnail){
+        throw new ApiError(400,"Invalid thumbnail path, upload again")
+       }
+         updatedThumbnail = newThumbnail.url;
+       //delete old thumbnail
+       if(video.thumbnail){
+        const oldThumbnailPublicId = extractPublicId(video.thumbnail,"thumbnails")
+        if(!oldThumbnailPublicId){
+            throw new ApiError(400,"Invalid Old Thumbnail url")
+        }
+        await deleteFromCloudinary(oldThumbnailPublicId)
+       }
+    }
+    //add available fields to updateFields
+    const updateFields = {} 
+    if(title && title.trim()!=="") updateFields.title = title.trim()
+    if(description && description.trim()!=="") updateFields.description = description.trim()
+    if(updatedThumbnail) updateFields.thumbnail = updatedThumbnail
+
+    if (Object.keys(updateFields).length === 0) {
+        throw new ApiError(400, "No valid fields provided for update");
+    }
+    
+    
+    const updatedVideo = await Video.findByIdAndUpdate(
+        videoId,
+        {
+            $set:updateFields
+        },
+        {
+            new:true
+        }
+    )
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            {updatedVideo},
+            "Video details updated successfully"
+        )
+    )
+})
 
 
 
-export {publishVideo,getAllVideos,getVideoById}
+export {publishVideo,getAllVideos,getVideoById,updateVideo}
