@@ -156,7 +156,7 @@ const updateVideo = asyncHandler(async(req,res)=>{
         if(!thumbnailLocalPath){
          throw new ApiError(400,"Thumbnail is required") 
        }
-       const newThumbnail = await uploadOnCloudinary(thumbnailLocalPath)
+       const newThumbnail = await uploadOnCloudinary(thumbnailLocalPath,"thumbnails")
        if(!newThumbnail){
         throw new ApiError(400,"Invalid thumbnail path, upload again")
        }
