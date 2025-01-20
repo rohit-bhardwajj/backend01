@@ -147,7 +147,7 @@ const updateVideo = asyncHandler(async(req,res)=>{
         throw new ApiError(404,"Invalid Video Id")
      }
      if(!(video.owner).equals(req.user._id)){
-        throw new ApiError(400,"You are not authorized to update Video details!")
+        throw new ApiError(403,"You are not authorized to update Video details!")
      }
      let updatedThumbnail = null;
 
@@ -201,7 +201,89 @@ const updateVideo = asyncHandler(async(req,res)=>{
         )
     )
 })
+const deleteVideo = asyncHandler(async(req,res)=>{
+    const {videoId} = req.params
+    if(!isValidObjectId(videoId)){
+        throw new ApiError(400,"Invalid Video Id")
+    }
+    const video = await Video.findById(videoId);
+    if(!video){
+        throw new ApiError(404,"Video not found")
+    }
+    if(!(video.owner).equals(req.user?._id)){
+        throw new ApiError(403,"You are not authorized to make changes to this Video")
+    }
+
+
+    const deletedVideo = await Video.findByIdAndDelete(
+        videoId
+    )
+    if(!deletedVideo){
+        throw new ApiError(500,"Error in deleting the video!")
+    }
+
+
+    // delete thumbnail & video from cloudinary
+    const VideoUrl = video.videoFile;
+    const thumbnailUrl = video.thumbnail;
+    if(!VideoUrl) throw new ApiError(404,"Invalid Cloudinary Video Url") 
+    if(!thumbnailUrl) throw new ApiError(404,"Invalid Cloudinary thumbnail Url") 
+    const VideoPublicId = extractPublicId(VideoUrl,"videos")
+    const thumbnailPublicId = extractPublicId(thumbnailUrl,"thumbnails")
+    await deleteFromCloudinary(VideoPublicId)
+    await deleteFromCloudinary(thumbnailPublicId)
+
+    
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            {deletedVideo},
+            "Video deleted successfully"
+        )
+    )
+})
+const togglePublishStatus = asyncHandler(async(req,res)=>{
+    const {videoId} = req.params
+    if(!isValidObjectId(videoId)){
+        throw new ApiError(400,"Invalid Video Id")
+    }
+    const video = await Video.findById(videoId);
+    if(!video){
+        throw new ApiError(404,"Video not found")
+    }
+    if(!(video.owner).equals(req.user?._id)){
+        throw new ApiError(403,"You are not authorized to make changes to this Video")
+    }
+
+    const updatedVideo = await Video.findByIdAndUpdate(
+        videoId,
+        {
+            $set:{
+                isPublished : !video.isPublished
+            }
+        },
+        {
+            new:true
+        }
+    )
+
+    if(!updatedVideo) throw new ApiError(500,"Error in Updating Video")
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            {updatedVideo},
+            "Video publish status toggled successfully"
+
+        )
+    )
+
+})
 
 
 
-export {publishVideo,getAllVideos,getVideoById,updateVideo}
+export {publishVideo,getAllVideos,getVideoById,updateVideo,deleteVideo,togglePublishStatus}
