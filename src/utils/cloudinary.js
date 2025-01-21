@@ -9,7 +9,8 @@ cloudinary.config({
     api_secret:process.env.CLOUDINARY_SECRET_KEY
 })
 
-const uploadOnCloudinary = async (localFilePath)=>{
+const uploadOnCloudinary = async (localFilePath,folder)=>{
+    const rootFolder = "videotube"
     try{
         if(!localFilePath) {
             throw new ApiError(409,"Unable to find Image's local-path")
@@ -17,7 +18,7 @@ const uploadOnCloudinary = async (localFilePath)=>{
         //nahi to upload it on cloudinary
        const response = await cloudinary.uploader.upload(localFilePath,{
             resource_type:"auto",
-            folder:"videotube"
+            folder:folder?`${rootFolder}/${folder}`:folder
         })
         //file uploaded
         // console.log("File has been uploaded on cloudinary ",response.url);
@@ -41,17 +42,42 @@ const uploadOnCloudinary = async (localFilePath)=>{
 const deleteFromCloudinary = async(PublicId)=>{
     try{
         if(!PublicId){
-            throw new ApiError(404,"Invalid Image Public Id")
+            throw new ApiError(400,"Invalid Resource Public Id")
         }
+        console.log("\nThis is public id : ",PublicId);
+        
         const response = await cloudinary.uploader.destroy(PublicId);
+        console.log("\nThis is response : ",response);
         if(response.result!=="ok"){
-            throw new ApiError("Unable to delete file from cloudinary")
+            throw new ApiError(500,"Unable to delete file from cloudinary")
         }
     }
     catch(error){
         console.error("Cloudinary Deletion failed:", error);
+        // console.log("Cloudinary public id:", PublicId);
+        throw new ApiError(500, "Error while deleting from Cloudinary");
+    }
+}
+const deleteVideoFromCloudinary = async(PublicId)=>{
+    try{
+        if(!PublicId){
+            throw new ApiError(400,"Invalid Resource Public Id")
+        }
+        console.log("\nThis is public id : ",PublicId);
+        
+        const response = await cloudinary.uploader.destroy(PublicId,{
+            resource_type:"video"
+        });
+        console.log("\nThis is response : ",response);
+        if(response.result!=="ok"){
+            throw new ApiError(500,"Unable to delete file from cloudinary")
+        }
+    }
+    catch(error){
+        console.error("Cloudinary Deletion failed:", error);
+        // console.log("Cloudinary public id:", PublicId);
         throw new ApiError(500, "Error while deleting from Cloudinary");
     }
 }
 
-export {uploadOnCloudinary,deleteFromCloudinary}
+export {uploadOnCloudinary,deleteFromCloudinary,deleteVideoFromCloudinary}
