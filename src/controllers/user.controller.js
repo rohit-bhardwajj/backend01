@@ -1,7 +1,6 @@
 import asyncHandler from '../utils/asyncHandler.js'
 import { ApiError } from '../utils/ApiError.js'
 import { User } from '../models/user.model.js'
-import { verifyJWT } from '../middlwares/auth.middleware.js'
 import { uploadOnCloudinary, deleteFromCloudinary } from '../utils/cloudinary.js'
 import { ApiResponse } from '../utils/ApiResponse.js'
 import jwt from 'jsonwebtoken'
@@ -61,9 +60,9 @@ const registerUser = asyncHandler(async (req, res) => {
     throw new ApiError(409, "Avatar file is required")
   }
 
-  const avatar = await uploadOnCloudinary(avatarLocalPath);
+  const avatar = await uploadOnCloudinary(avatarLocalPath,"user-avatars");
 
-  const coverImage = await uploadOnCloudinary(coverImageLocalPath);
+  const coverImage = await uploadOnCloudinary(coverImageLocalPath,"user-coverImages");
 
   if (!avatar) {
     throw new ApiError(409, "Unable to upload avatar to cloudinary")
@@ -280,7 +279,7 @@ const updateAccountDetails = asyncHandler(async (req, res) => {
 
 const updateUserAvatarImage = asyncHandler(async (req, res) => {
   const avatarLocalPath = req.file?.path
-  const newAvatar = await uploadOnCloudinary(avatarLocalPath)
+  const newAvatar = await uploadOnCloudinary(avatarLocalPath,"user-avatars")
   if (!newAvatar.url) {
     throw new ApiError(400, "Image upload failed, Ensure the image-size is below 10MB")
   }
@@ -298,9 +297,9 @@ const updateUserAvatarImage = asyncHandler(async (req, res) => {
   }
   //delete oldavatar from cloudinary
   const oldAvatarUrl = user.avatar;
-  const oldAvatarPublicId = extractPublicId(oldAvatarUrl)
+  const oldAvatarPublicId = extractPublicId(oldAvatarUrl,"user-avatars")
   if (!oldAvatarPublicId) {
-    throw new ApiError(400, "Invalid Avatar Url")
+    throw new ApiError(400, "Invalid Old Avatar Url")
   }
   //Deletion logic using cloudinary destroy!!
   await deleteFromCloudinary(oldAvatarPublicId)
@@ -317,7 +316,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
   if (!coverImageLocalPath) {
     throw new ApiError(401, "Cover-image is missing")
   }
-  const newcoverImage = await uploadOnCloudinary(coverImageLocalPath)
+  const newcoverImage = await uploadOnCloudinary(coverImageLocalPath,"user-coverImages")
   if (!newcoverImage.url) {
     throw new ApiError(401, "Error while uploading on cover-image")
   }
@@ -328,7 +327,7 @@ const updateUserCoverImage = asyncHandler(async (req, res) => {
   ).select("coverImage")//old-one
 
   const oldCoverImageUrl = user.coverImage
-  const coverImagePublicId = extractPublicId(oldCoverImageUrl)
+  const coverImagePublicId = extractPublicId(oldCoverImageUrl,"user-coverImages")
   if (!coverImagePublicId) {
     throw new ApiError(400, "Invalid cover-Image Url")
   }
