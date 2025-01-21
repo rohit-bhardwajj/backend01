@@ -1,7 +1,7 @@
 import { ApiError } from "../utils/ApiError.js";
 import { ApiResponse } from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
-import { deleteFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
+import { deleteFromCloudinary,deleteVideoFromCloudinary, uploadOnCloudinary } from "../utils/cloudinary.js";
 import {Video} from '../models/video.model.js'
 import { isValidObjectId } from "mongoose";
 import { extractPublicId } from "../utils/extractPublicId.js";
@@ -230,7 +230,7 @@ const deleteVideo = asyncHandler(async(req,res)=>{
     if(!thumbnailUrl) throw new ApiError(404,"Invalid Cloudinary thumbnail Url") 
     const VideoPublicId = extractPublicId(VideoUrl,"videos")
     const thumbnailPublicId = extractPublicId(thumbnailUrl,"thumbnails")
-    await deleteFromCloudinary(VideoPublicId)
+    await deleteVideoFromCloudinary(VideoPublicId)
     await deleteFromCloudinary(thumbnailPublicId)
 
     
@@ -283,7 +283,42 @@ const togglePublishStatus = asyncHandler(async(req,res)=>{
     )
 
 })
+const IncreaseVideoViews = asyncHandler(async(req,res)=>{
+    const {videoId} = req.params
+    if(!isValidObjectId(videoId)){
+        throw new ApiError(400,"Invalid Video Id")
+    }
+    // const video = await Video.findById(videoId);
+    // if(!video){
+    //     throw new ApiError(404,"Video not found")
+    // }
+    const UpdatedVideo = await Video.findByIdAndUpdate(
+        videoId,
+        {
+            $inc :{
+                views:1
+            }
+        },
+        {
+            new : true
+        }
+    ).select("title description views")
+    if(!UpdatedVideo){
+        throw new ApiError(500,"Error updating video views!")
+    }
+
+    return res
+    .status(200)
+    .json(
+        new ApiResponse(
+            200,
+            {UpdatedVideo},
+            "Video views updated"
+        )
+    )
+
+})
 
 
 
-export {publishVideo,getAllVideos,getVideoById,updateVideo,deleteVideo,togglePublishStatus}
+export {publishVideo,getAllVideos,IncreaseVideoViews,getVideoById,updateVideo,deleteVideo,togglePublishStatus}
