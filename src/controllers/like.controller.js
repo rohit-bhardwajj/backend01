@@ -39,7 +39,7 @@ const toggleVideoLike = asyncHandler(async(req,res)=>{
     )
  }
  if(likedVideo){
-    const toggleDislike = await Like.findByIdAndDelete(videoId)
+    const toggleDislike = await Like.findByIdAndDelete(likedVideo._id);
     if(!toggleDislike){
         throw new ApiError(500,"Error Disliking the video")
     }
