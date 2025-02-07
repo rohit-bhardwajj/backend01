@@ -65,6 +65,31 @@ const updateComment = asyncHandler(async(req,res)=>{
         )
     )
 
+}) 
+const deleteComment = asyncHandler(async(req,res)=>{
+    const {commentId} = req.params;
+    if(!isValidObjectId(commentId)){
+        throw new ApiError(400,"Invalid comment Id");
+    }
+    const comment = await Comment.findOne({
+        $and:[{_id:commentId},{owner:req.user?._id}]
+    })
+    if(!comment){
+        throw new ApiError("Not authorized to delete comment");
+    }
+    const deletedComment = await Comment.findByIdAndDelete(commentId);
+    if(!deletedComment){
+        throw new ApiError(500,"Error in deleting the comment");
+    }
+    return res
+    .status(200)
+    .json( 
+        new ApiResponse(
+            200,
+            {deletedComment},
+            "Comment deleted successfully"
+        )
+    )
 })
 
-export {createComment,updateComment}
+export {createComment,updateComment,deleteComment}
